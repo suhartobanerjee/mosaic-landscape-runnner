@@ -1,8 +1,14 @@
+getwd()
 setwd("../")
-source("./set_grid.R")
+source("./main.R")
 
-grid_dt <- set_grid()
-grid_dt
-min(grid_dt$width)
-grid_dt[width == 0]
-grid_dt[id == 40]
+landscape_obj <- set_grid(block = 2e5)
+landscape_obj
+
+is_landscape_object(landscape_obj)
+landscape_obj@grid_dt[is.na(bin_chrom)]
+
+
+# min(grid_dt$width)
+# grid_dt[width == 0]
+# grid_dt[id == 40]

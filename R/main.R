@@ -1,3 +1,8 @@
+source("./class.R")
+source("./set_grid.R")
+source("./motion_calculations.R")
+
+
 game_loop <- function(rounds,
                       initial_velocity = 100,
                       acceleration = 50) {
@@ -16,7 +21,7 @@ game_loop <- function(rounds,
 }
 
 
-system.time(time <- game_loop(c(1:50000000)))
-time[1:10]
-cumsum(time)
-sum(time)
+# system.time(time <- game_loop(c(1:50000000)))
+# time[1:10]
+# cumsum(time)
+# sum(time)

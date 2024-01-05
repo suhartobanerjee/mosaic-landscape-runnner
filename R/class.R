@@ -2,7 +2,9 @@ setClass(
     Class = "Landscape",
     slots = c(
         iter = "numeric",
-        grid = "data.table",
+        all_data = "data.table",
+        all_cells = "character",
+        grids = "list",
         block = "numeric",
         n_bins = "numeric",
         initial_velocity = "numeric",
@@ -11,29 +13,34 @@ setClass(
         time = "numeric",
         prop_factor = "numeric",
         current_bin = "numeric",
-        current_cell = "character",
+        cells = "character",
+        previous_sv = "character",
+        current_sv = "character",
         amp_start_bin = "numeric",
-        amp_count = "numeric"
+        amp_flag = "numeric"
     )
 )
 
 
-set_landscape_object <- function(grid_dt, block) {
-    
+set_landscape_object <- function(all_data, block) {
     landscape_obj <- new("Landscape",
         iter = 1,
-        grid = grid_dt,
+        all_data = all_data,
+        all_cells = all_data[, unique(cell)],
+        grids = list(),
         block = block,
-        n_bins = grid_dt[, max(bin_id)],
+        n_bins = NA_integer_,
         initial_velocity = 100,
         final_velocity = NA_integer_,
         acceleration = 50,
-        time = c(1),
-        prop_factor = 0.1,
-        current_bin = 1,
-        current_cell = "",
+        time = numeric(0),
+        prop_factor = 0.01,
+        current_bin = NA_integer_,
+        cells = character(0),
+        previous_sv = NA_character_,
+        current_sv = NA_character_,
         amp_start_bin = 0,
-        amp_count = 0
+        amp_flag = 0
     )
 
     return(landscape_obj)

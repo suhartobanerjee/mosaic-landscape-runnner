@@ -2,11 +2,21 @@ getwd()
 setwd("../")
 source("./main.R")
 
-landscape_obj <- set_grid(block = 1e5)
-landscape_obj
+obj <- set_all_data(block = 1e5)
+obj
 
-is_landscape_object(landscape_obj)
-landscape_obj@grid[is.na(bin_chrom)]
+all_cells <- obj@all_data[, unique(cell)]
+all_cells
+
+obj <- set_grid(obj, all_cells[2])
+obj@cells
+obj@grids
+obj@grids[[1]][, unique(cell)]
+obj
+
+
+is_landscape_object(obj)
+# landscape_obj@grid[is.na(bin_chrom)]
 
 
 

@@ -5,44 +5,69 @@ library(purrr)
 library(ggplot2)
 
 
-obj <- set_grid()
+initialize_obj <- function(cell_id = 2) {
+    obj <- set_all_data()
+    obj <- set_grid(obj, obj@all_cells[cell_id])
+
+    return(obj)
+}
+# obj@cells
+# obj@grids
+# obj@grids[[1]][, unique(cell)]
+# obj@grids[[1]][, unique(sv_call_name)]
+# obj
+#
+#
+# obj@n_bins
+
+obj <- initialize_obj(cell_id = 6)
 obj
 
-obj@grid <- obj@grid[cell == "TALL3x1_DEA5_PE20419" |
-         cell == "all"]
-
-obj@n_bins
-obj@grid[sv_call_name == "dup_h2"]
 # ret_obj <- game_loop(obj)
 # ret_obj
+# ret_obj@iter
 
+# obj@n_bins
+# seq_along(1:obj@n_bins)
+system.time(
+    while (obj@current_bin < obj@n_bins) {
+        obj <- game_loop(obj)
+    }
+)
 
-for(x in c(1:obj@n_bins)) {
-    obj@current_bin <- x
-    obj <- game_loop(obj)
-}
 obj@iter
-obj@initial_velocity
-obj@final_velocity
+nrow(obj@grids[[1]])
+print(c(
+    obj@initial_velocity,
+    obj@final_velocity,
+    obj@acceleration,
+    obj@current_sv,
+    obj@amp_start_bin,
+    obj@amp_flag
+))
 
-obj@amp_start_bin
-obj@amp_count
+# total time required
+c_sum <- cumsum(obj@time)
+c_sum[length(c_sum)]
 
-obj@time
-length(obj@time)
-obj@time[167]
+# length(obj@time)
 
 time_dt <- data.table(
-    points = 1:obj@n_bins,
-    time = obj@time[1:obj@n_bins]
+    points = 1:length(obj@time),
+    time = obj@time
 )
 time_dt
 
-ggplot(data = time_dt,
-       aes(x = points,
-           y = time
-       )
+ggplot(
+    data = time_dt,
+    aes(
+        x = points,
+        y = time
+    )
 ) +
     geom_line()
 
-ggsave("../plots/time_plots.pdf")
+ggsave(str_glue("../plots/{obj@cells}_time_plots.pdf"))
+
+
+obj@all_data[sv_call_name != "ref", .N, by = cell]

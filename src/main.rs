@@ -27,7 +27,7 @@ fn main() {
     df = df
         .lazy()
         .filter((col("bin_id").gt(168)).and(col("bin_id").lt(170)))
-        .select([col("llr_to_ref"), col("chrom"), col("start_loc"), col("end_loc"), col("sv_call_name")])
+        .select([col("seqnames"), col("start"), col("end"), col("sv_state"), col("llr_to_ref")])
         .collect()
         .expect("Cannot perform the operation");
 

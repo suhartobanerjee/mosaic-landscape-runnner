@@ -5,6 +5,13 @@ source("./main.R")
 obj <- set_all_data(block = 1e5)
 obj
 
+# writing to file
+fwrite(
+    x = obj,
+    file = "../data/tall3_proc.tsv.gz",
+    sep = "\t"
+)
+
 all_cells <- obj@all_data[, unique(cell)]
 all_cells
 

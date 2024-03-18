@@ -4,8 +4,8 @@ library(GenomicRanges)
 
 set_dt_names <- function(gro_dt) {
     setnames(gro_dt,
-        c("seqnames", "start", "end"),
-        c("chrom", "start_loc", "end_loc"),
+        c("chrom", "start_loc", "end_loc", "sv_call_name"),
+        c("seqnames", "start", "end", "sv_state"),
         skip_absent = T
     )
 
@@ -21,19 +21,13 @@ read_sv_data <- function(path = "../data/TALL03-DEA5.strict.filtered.txt") {
     sv_dt <- raw[llr_to_ref != Inf]
     sv_dt <- sv_dt[!str_detect(sv_call_name, regex("complex|idup"))]
     set_dt_names(sv_dt)
-    sv_dt[, width := end_loc - start_loc]
+#     sv_dt[, width := end_loc - start_loc]
 
     sv_gro <- makeGRangesFromDataFrame(sv_dt,
-        seqnames.field = "chrom",
-        start.field = "start_loc",
-        end.field = "end_loc",
         keep.extra.columns = T
     )
 
-    return(list(
-        sv_gro = sv_gro,
-        sv_dt = sv_dt
-    ))
+    return(sv_gro)
 }
 
 
@@ -41,22 +35,15 @@ read_ideo_data <- function(path = "../data/ideogram_scaffold.tsv") {
     ideo_dt <- fread(path)
 
     ideo_gro <- makeGRangesFromDataFrame(ideo_dt,
-        seqnames.field = "chrom",
-        start.field = "start_loc",
-        end.field = "end_loc",
         keep.extra.columns = T
     )
 
-    return(list(
-        ideo_gro = ideo_gro,
-        ideo_dt = ideo_dt
-    ))
+    return(ideo_gro)
 }
 
 
 bin_genome <- function(block) {
-    ret_list <- read_ideo_data()
-    ideo_gro <- ret_list[[1]]
+    ideo_gro <- read_ideo_data()
 
     chrom_lengths <- width(ideo_gro)
     names(chrom_lengths) <- seqnames(ideo_gro)
@@ -69,39 +56,35 @@ bin_genome <- function(block) {
         cut.last.tile.in.chrom = T
     )
     bin_gen_gro$bin_id <- c(1:length(bin_gen_gro))
-    bin_gen_dt <- as.data.table(bin_gen_gro)
+#     bin_gen_dt <- as.data.table(bin_gen_gro)
     # so that the end does not overlap with a sv
     # this prevents the edge case where the end is
     # a round number and it overlaps with a sv start
     # which includes the previous bin to overlap with the sv
     # even though it is a 1 base overlap.
-    bin_gen_dt[, end := end - 1]
+#     bin_gen_dt[, end := end - 1]
+    end(bin_gen_gro) <- end(bin_gen_gro) - 1
 
     # making the gro again with the above change
-    bin_gen_gro <- makeGRangesFromDataFrame(bin_gen_dt)
+#     bin_gen_gro <- makeGRangesFromDataFrame(bin_gen_dt)
 
 
-    return(list(
-        bin_gen_gro = bin_gen_gro,
-        bin_gen_dt = bin_gen_dt
-    ))
+    return(bin_gen_gro)
 }
 
 
 set_all_data <- function(sv_path = NULL,
                          block = 1e5) {
     if (is.null(sv_path)) {
-        ret_list <- read_sv_data()
+        sv_gro <- read_sv_data()
     } else {
-        ret_list <- read_sv_data(sv_path)
+        sv_gro <- read_sv_data(sv_path)
     }
-    sv_gro <- ret_list[[1]]
-    sv_dt <- ret_list[[2]]
+    sv_dt <- as.data.table(sv_gro)
 
     # binning the genome
-    ret_list <- bin_genome(block)
-    bin_gen_gro <- ret_list[[1]]
-    bin_gen_dt <- ret_list[[2]]
+    bin_gen_gro <- bin_genome(block)
+    bin_gen_dt <- as.data.table(bin_gen_gro)
 
     # finding overlaps between binned genome
     # and the sv_dt
@@ -120,8 +103,8 @@ set_all_data <- function(sv_path = NULL,
     # unique names for the bin gro cols
     setnames(
         all_data,
-        c("seqnames", "start", "end", "i.width"),
-        c("bin_chrom", "bin_start", "bin_end", "bin_width"),
+        c("i.seqnames", "i.start", "i.end", "i.width"),
+        c("bin_seqnames", "bin_start", "bin_end", "bin_width"),
         skip_absent = T
     )
 

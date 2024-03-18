@@ -1,4 +1,4 @@
-chrom	start_loc	end_loc	width	strand	name	gieStain
+seqnames	start	end	width	strand	name	gieStain
 chr1	1	248956422	248956422	*	p36.33	gneg
 chr2	1	242193529	242193529	*	p25.3	gneg
 chr3	1	198295559	198295559	*	p26.3	gpos50

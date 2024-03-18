@@ -135,10 +135,10 @@ set_all_data <- function(sv_path = NULL,
 
     # making a landscape_obj with all_data, block
     # this func has the defaults of other slots set
-    landscape_obj <- set_landscape_object(all_data, block)
+    #landscape_obj <- set_landscape_object(all_data, block)
 
 
-    return(landscape_obj)
+    return(all_data)
 }
 
 

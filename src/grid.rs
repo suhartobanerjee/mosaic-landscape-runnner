@@ -1,40 +1,101 @@
-use std::sync::Arc;
-use polars::prelude::{DataFrame, CsvReader, SerReader, PolarsError, DataType, Field, Schema};
+use std::io::{self, Write};
 
 
-#[derive(Debug)]
-pub struct GRanges {
-    pub seqnames: Vec<String>,
-    pub start: Vec<i64>,
-    pub end: Vec<i64>,
+#[derive(Debug, Clone, Copy)]
+pub enum Direction {
+    Forward,
+    Backward,
+    Jump,
+    Stand,
+    Quit
 }
 
 
-#[derive(Debug)]
-pub struct Block {
-    pub gro: Vec<GRanges>,
-    pub cell: Vec<String>,
-    pub sv_state: Vec<String>
+#[derive(Debug, Clone, Copy)]
+pub struct Player {
+    pub position: usize,
+    pub action: Direction
 }
+
+
+impl Player {
+    pub fn new() -> Player {
+        Player {
+            position: 0,
+            action: Direction::Stand
+        }
+    }
+
+    pub fn parse_input(&mut self, input: &str) {
+        let proc_input = input.trim().to_lowercase();
+
+        match proc_input.as_str() {
+            "w" => self.action = Direction::Jump,
+            "d" => self.action = Direction::Forward,
+            "a" => self.action = Direction::Backward,
+            "q" => self.action = Direction::Quit,
+            &_ => self.action = Direction::Stand
+        }
+    }
+
+
+    pub fn execute_action(&mut self, grid: &Grid) {
+        match self.action {
+            Direction::Forward => {
+                self.position += 1;
+                println!("{}", grid.sv_state.get(self.position).expect("end of vec"));
+            },
+            Direction::Backward => {
+                self.position -= 1;
+                println!("{}", grid.sv_state.get(self.position).expect("end of vec"));
+            },
+            Direction::Jump => {
+                println!("{}", grid.sv_state.get(self.position).expect("end of vec"));
+            },
+            Direction::Stand => {
+                println!("{}", grid.sv_state.get(self.position).expect("end of vec"));
+            },
+            Direction::Quit => {
+                println!("{}","-".repeat(80));
+                println!(r"
+ _                  _                
+| |                | |               
+| |__  _   _  ___  | |__  _   _  ___ 
+| '_ \| | | |/ _ \ | '_ \| | | |/ _ \
+| |_) | |_| |  __/ | |_) | |_| |  __/
+|_.__/ \__, |\___| |_.__/ \__, |\___|
+        __/ |              __/ |     
+       |___/              |___/      
+                         ");
+                println!("{}","-".repeat(80));
+            }
+        }
+    }
+}
+
 
 #[derive(Debug)]
 pub struct Grid {
-    pub gro: Vec<GRanges>,
-    pub id: Vec<i64>
+    pub bin_id: Vec<i64>,
+    pub sv_state: Vec<String>,
+    pub llr_to_ref: Vec<f64>
 }
 
-pub fn read_sv_data() -> Result<DataFrame, PolarsError> {
 
-    let schema = Schema::from_iter(vec![
-        Field::new("llr_to_ref", DataType::Float64)
-    ]);
+pub fn get_input(player: &mut Player) {
+    // Prompt
+    println!("");
+    print!("> ");
+    io::stdout().flush().unwrap();
 
-    let df = CsvReader::from_path("data/tall3_proc.tsv.gz")
-        .expect("cannot open file")
-        .has_header(true)
-        .with_separator(b'\t')
-        .with_dtypes(Some(Arc::new(schema)))
-        .finish();
+    let mut input_str = String::new();
 
-    return df;
+    io::stdin()
+        .read_line(&mut input_str)
+        .expect("Failed to read move");
+    println!("");
+
+    // Parse and set the action
+    player.parse_input(input_str.as_str());
+
 }

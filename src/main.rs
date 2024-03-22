@@ -1,36 +1,42 @@
 pub mod grid;
-use grid::Grid;
-use grid::GRanges;
-use grid::Block;
-use polars::lazy::dsl::col;
-use polars::prelude::*;
+use std::vec;
+
+use crate::grid::Direction;
+use crate::grid::Grid;
+use crate::grid::Player;
+use crate::grid::get_input;
 
 fn main() {
-    let grid = Grid {
-        gro: vec![GRanges { seqnames: vec!["chr1".to_string()], start: vec![100], end: vec![150] }],
-        id: vec![1]
-    };
 
-    let block = Block{
-        gro: vec![GRanges { seqnames: vec!["chr1".to_string()], start: vec![120], end: vec![130] }],
-        cell: vec!["cell1".to_string()],
-        sv_state: vec!["amp".to_string()]
-    };
+    // initial message
+    println!("{}","-".repeat(80));
+    println!(r"
+    __  ___                 _         ____                             
+   /  |/  /___  _________ _(_)____   / __ \__  ______  ____  ___  _____
+  / /|_/ / __ \/ ___/ __ `/ / ___/  / /_/ / / / / __ \/ __ \/ _ \/ ___/
+ / /  / / /_/ (__  ) /_/ / / /__   / _, _/ /_/ / / / / / / /  __/ /    
+/_/  /_/\____/____/\__,_/_/\___/  /_/ |_|\__,_/_/ /_/_/ /_/\___/_/     
+                                                                       
+             ");
+    println!("{}","-".repeat(80));
 
-    if block.gro[0].start > grid.gro[0].start {
-        println!("Grid: {:?}\nBlock {:?}", grid, block);
+
+    // initialisations
+    let grid = Grid{
+        bin_id: vec![1, 2, 3, 4],
+        sv_state: vec!["ref".to_string(), "amp".to_string(), "del".to_string(), "inv".to_string()],
+        llr_to_ref: vec![3.2, 1.6, 2.9, 4.1]
+    };
+    let mut player = Player::new();
+    println!("{}", grid.sv_state.get(player.position).expect("end of vec"));
+
+    while player.position <= grid.bin_id.len() {
+        get_input(&mut player);
+        player.execute_action(&grid);
+        
+        match player.action {
+            Direction::Quit => break,
+            _ => continue
+        }
     }
-
-    let mut df = grid::read_sv_data()
-        .expect("Could not read the df");
-
-    df = df
-        .lazy()
-        .filter((col("bin_id").gt(168)).and(col("bin_id").lt(170)))
-        .select([col("seqnames"), col("start"), col("end"), col("sv_state"), col("llr_to_ref")])
-        .collect()
-        .expect("Cannot perform the operation");
-
-
-    println!("{:?}", df);
 }

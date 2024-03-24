@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 #polars = {version = "0.37.0", features = ["lazy", "decompress"]}
+bevy = "0.10.0"

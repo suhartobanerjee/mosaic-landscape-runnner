@@ -1,4 +1,6 @@
 use bevy::prelude::*;
+use components::camera_movement;
+use components::confine_camera_movement;
 use components::confine_player_movement;
 use components::player_movement;
 use components::spawn_camera;
@@ -19,10 +21,12 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_startup_system(spawn_camera)
-        .add_startup_system(spawn_player)
         .add_startup_system(spawn_landscape)
+        .add_startup_system(spawn_player)
         .add_system(player_movement)
+        .add_system(camera_movement)
         .add_system(confine_player_movement)
+        .add_system(confine_camera_movement)
         .run();
 
 }

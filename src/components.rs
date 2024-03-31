@@ -1,7 +1,11 @@
 use bevy::window::PrimaryWindow;
 use bevy::prelude::*;
+use bevy_rapier2d::na::iter;
+use bevy_rapier2d::prelude::*;
+
 
 pub const PLAYER_SPEED: f32 = 500.0;
+pub const PLAYER_JUMP_IMPULSE: f32 = 20.0;
 pub const BASE_ROAD: (f32, f32, f32)= (0.0, 70.0, 0.0);
 pub const BASE_PLAYER: (f32, f32, f32)= (80.0, BASE_ROAD.1 + 60.0, 0.0);
 pub const PLAYER_SIZE: f32 = 70.0;
@@ -9,7 +13,10 @@ pub const PLAYER_SIZE: f32 = 70.0;
 
 #[derive(Component)]
 pub struct Player {
-    position: Landscape
+    position: Landscape,
+    speed: f32,
+    jump_impulse: f32,
+    is_jumping: bool
 }
 
 pub fn spawn_player(mut commands: Commands,
@@ -21,21 +28,33 @@ pub fn spawn_player(mut commands: Commands,
         sv_state: SvState::Ref
     });
 
-    commands.spawn((
+
+    commands.spawn(
         SpriteBundle{
             transform: Transform::from_xyz(BASE_PLAYER.0, BASE_PLAYER.1, BASE_PLAYER.2),
             texture: asset_server.load("sprites/character_maleAdventurer_run0.png"),
             ..Default::default()
         },
-        Player {
-            position: landscape.to_owned()
-        },
         )
-    );
+        .insert(Player { 
+            position: landscape.to_owned(),
+            speed: PLAYER_SPEED,
+            jump_impulse: PLAYER_JUMP_IMPULSE,
+            is_jumping: false
+        })
+        .insert(RigidBody::Dynamic)
+        .insert(Collider::cuboid(0.5, 0.5))
+        .insert(ColliderMassProperties::Mass(80.0))
+        .insert(GravityScale(100.0))
+        .insert(ActiveEvents::COLLISION_EVENTS)
+        .insert(Velocity { linvel: Vec2::new(0.0, 0.0), angvel: 0.0 })
+        .insert(LockedAxes::ROTATION_LOCKED);
+
+
 }
 
 #[derive(Component)]
-pub struct GameCamera {}
+pub struct GameCamera;
 
 pub fn spawn_camera(mut commands: Commands,
                     window_query: Query<&Window, With<PrimaryWindow>>) {
@@ -53,78 +72,64 @@ pub fn spawn_camera(mut commands: Commands,
 }
 
 pub fn player_movement(keyboard_input: Res<Input<KeyCode>>,
-                       mut player_query: Query<(&mut Transform, &Player), With<Player>>,
-                       time: Res<Time>,
-                       landscape_query: Query<&Landscape, With<Transform>>) {
+                       mut player_query: Query<(&mut Velocity, &mut Player), With<Player>>,
+                       time: Res<Time>) {
 
-    if let Ok(mut transform) = player_query.get_single_mut() {
-        let mut direction = Vec3::new(0.0, 0.0, BASE_PLAYER.2);
-
-        let speed_offset: f32 = match landscape_query.iter().next().unwrap().sv_state {
-            SvState::Ref => 1.0,
-            SvState::Amp => 1.0,
-            SvState::Del => 0.05,
-            SvState::Inv => -1.0
-        };
+    for (mut velocity, mut player) in player_query.iter_mut() {
+        let mut direction = Vec2::ZERO;
 
         if keyboard_input.pressed(KeyCode::Right) {
-            direction += Vec3::new(1.0, 0.0, BASE_PLAYER.2)
+            direction = Vec2::new(1.0, 0.0);
         }
         if keyboard_input.pressed(KeyCode::Left) {
-            direction += Vec3::new(-1.0, 0.0, BASE_PLAYER.2)
+            direction = Vec2::new(-1.0, 0.0);
         }
-        if keyboard_input.pressed(KeyCode::Up) {
-            direction += Vec3::new(0.0, 1.0, BASE_PLAYER.2)
-        }
-        if keyboard_input.pressed(KeyCode::Down) {
-            direction += Vec3::new(0.0, -1.0, BASE_PLAYER.2)
+        if keyboard_input.pressed(KeyCode::Up) && !player.is_jumping {
+            direction = Vec2::new(0.0, player.jump_impulse);
+            player.is_jumping = true;
         }
 
-        if direction.length() > 0.0 {
-            direction = direction.normalize();
-        }
-
-        transform.0.translation += direction * PLAYER_SPEED * time.delta_seconds();
+        velocity.linvel = direction * player.speed;
     }
 }
 
+
+pub fn set_jumping_false_if_touching_floor(mut contact_events: EventReader<CollisionEvent>,
+                                           mut query: Query<(Entity, &mut Player)>) {
+    for event in contact_events.read() {
+        for (entity_player, mut player) in query.iter_mut() {
+            if let CollisionEvent::Started(h1, h2, _) = event {
+                if h1 == &entity_player || h2 == &entity_player {
+                    player.is_jumping = false;
+                }
+            }
+        }
+    }
+
+}
+
 pub fn camera_movement(keyboard_input: Res<Input<KeyCode>>,
+                       player_query: Query<&Velocity, With<Player>>,
                        mut camera_query: Query<&mut Transform, With<GameCamera>>,
-                       time: Res<Time>,
-                       landscape_query: Query<&Landscape, With<Transform>>) {
+                       time: Res<Time>) {
 
     if let Ok(mut transform) = camera_query.get_single_mut() {
         let mut direction = Vec3::ZERO;
-
-
-        let speed_offset: f32 = match landscape_query.iter().next() {
-            Some(landscape) => match landscape.sv_state {
-                SvState::Ref => 1.0,
-                SvState::Amp => 1.0,
-                SvState::Del => 0.05,
-                SvState::Inv => -1.0
-            },
-            None => 2.0
-        };
+        let player_x = player_query.get_single().unwrap().linvel.x;
+        println!("{:?}", &player_x);
 
         if keyboard_input.pressed(KeyCode::Right) {
-            direction += Vec3::new(1.0, 0.0, 0.0)
+            direction = Vec3::new(1.0, 0.0, 0.0)
         }
         if keyboard_input.pressed(KeyCode::Left) {
-            direction += Vec3::new(-1.0, 0.0, 0.0)
-        }
-        if keyboard_input.pressed(KeyCode::Up) {
-            direction += Vec3::new(0.0, 1.0, 0.0)
-        }
-        if keyboard_input.pressed(KeyCode::Down) {
-            direction += Vec3::new(0.0, -1.0, 0.0)
+            direction = Vec3::new(-1.0, 0.0, 0.0)
         }
 
         if direction.length() > 0.0 {
             direction = direction.normalize();
         }
 
-        transform.translation += direction * PLAYER_SPEED * time.delta_seconds() * speed_offset;
+        transform.translation += Vec3::new(player_x, 0.0, 0.0) * time.delta_seconds() * 0.6;
     }
 }
 
@@ -229,17 +234,20 @@ pub fn spawn_landscape(mut commands: Commands,
         }
 
         // spawning the landscape
-        commands.spawn((
+        commands.spawn(
                 SpriteBundle{
                     transform: Transform::from_xyz(BASE_ROAD.0 + offset * f32::from(round), BASE_ROAD.1, BASE_ROAD.2 - 1.0),
                     texture: asset_server.load(sprite_dir),
                     ..Default::default()
-                },
-                Landscape {
+                }
+            )
+            .insert(Landscape {
                     bin_id: u32::from(round),
                     sv_state: sv_type
                 },
                 )
-        );
+            .insert(RigidBody::Fixed)
+            .insert(Collider::cuboid(70.0, 70.0))
+            .insert(ActiveEvents::COLLISION_EVENTS);
     }
 }

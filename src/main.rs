@@ -1,32 +1,28 @@
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 use components::camera_movement;
 use components::confine_camera_movement;
 use components::confine_player_movement;
 use components::player_movement;
+use components::set_jumping_false_if_touching_floor;
 use components::spawn_camera;
 use components::spawn_landscape;
 use components::spawn_player;
 
 pub mod grid;
 pub mod components;
-use std::vec;
 
-use crate::grid::Direction;
-use crate::grid::Grid;
-use crate::grid::Player;
-use crate::grid::get_input;
 
 fn main() {
 
     App::new()
-        .add_plugins(DefaultPlugins)
-        .add_startup_system(spawn_camera)
-        .add_startup_system(spawn_landscape)
-        .add_startup_system(spawn_player)
-        .add_system(player_movement)
-        .add_system(camera_movement)
-        .add_system(confine_player_movement)
-        .add_system(confine_camera_movement)
+        .add_plugins((DefaultPlugins, RapierPhysicsPlugin::<NoUserData>::default()))
+        .add_systems(Startup, (spawn_camera, spawn_landscape, spawn_player))
+        .add_systems(Update, (player_movement,
+                              set_jumping_false_if_touching_floor,
+                              camera_movement.after(player_movement),
+                              //confine_player_movement.after(player_movement),
+                              confine_camera_movement))
         .run();
 
 }
